@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kirim Pesan Anonim</title>
+  <title>Admin - Pesan Anonim</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
@@ -13,30 +13,30 @@
     }
   </style>
 </head>
-<body class="min-h-screen bg-gray-100 flex items-center justify-center px-4">
-  <div class="max-w-md w-full bg-white rounded-2xl shadow-lg p-6">
-    <h1 class="text-2xl font-semibold text-gray-800 mb-4 text-center">💌 Kirim Pesan Anonim</h1>
-    
-    <label class="block text-sm font-medium text-gray-700 mb-1">Nama (Opsional)</label>
-    <input id="nameInput" type="text" placeholder="Boleh dikosongkan"
-      class="w-full px-4 py-2 mb-4 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500">
-
-    <label class="block text-sm font-medium text-gray-700 mb-1">Isi Pesan *</label>
-    <textarea id="messageInput" rows="4" placeholder="Tulis pesanmu di sini..."
-      class="w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 mb-4"></textarea>
-
-    <button onclick="sendMessage()"
-      class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 rounded-xl transition duration-200">
-      Kirim Pesan
-    </button>
-
-    <p id="status" class="text-center mt-4 text-sm text-green-600 hidden">Pesan berhasil dikirim!</p>
+<body class="min-h-screen bg-gray-100 py-10 px-4">
+  <div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-lg p-6">
+    <h1 class="text-2xl font-semibold text-gray-800 mb-6 text-center">📬 Daftar Pesan Anonim</h1>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm text-left text-gray-700">
+        <thead class="bg-gray-200 text-gray-600 uppercase text-xs">
+          <tr>
+            <th class="px-4 py-2">No</th>
+            <th class="px-4 py-2">Nama</th>
+            <th class="px-4 py-2">Pesan</th>
+            <th class="px-4 py-2">Waktu</th>
+          </tr>
+        </thead>
+        <tbody id="messagesTable" class="divide-y divide-gray-200">
+          <!-- Data akan ditampilkan di sini -->
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-    import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDyVqF5Mmn0ImQ8V9JORBK-K0C2Bn-xBd4",
@@ -52,33 +52,41 @@
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);
 
-    window.sendMessage = function () {
-      const name = document.getElementById("nameInput").value.trim();
-      const message = document.getElementById("messageInput").value.trim();
-      const status = document.getElementById("status");
+    const tableBody = document.getElementById("messagesTable");
+    const messagesRef = ref(database, "pesan");
 
-      if (message === "") {
-        alert("Pesan tidak boleh kosong!");
+    onValue(messagesRef, (snapshot) => {
+      const data = snapshot.val();
+      tableBody.innerHTML = "";
+
+      if (!data) {
+        tableBody.innerHTML = "<tr><td colspan='4' class='px-4 py-3 text-center text-gray-500'>Belum ada pesan.</td></tr>";
         return;
       }
 
-      const data = {
-        nama: name || "Anonim",
-        isi: message,
-        timestamp: Date.now()
-      };
+      // Konversi objek ke array dan urutkan berdasarkan timestamp terbaru
+      const pesanArray = Object.entries(data).map(([id, value]) => ({
+        ...value,
+        id
+      })).sort((a, b) => b.timestamp - a.timestamp);
 
-      push(ref(database, "pesan"), data)
-        .then(() => {
-          document.getElementById("messageInput").value = "";
-          document.getElementById("nameInput").value = "";
-          status.classList.remove("hidden");
-          setTimeout(() => status.classList.add("hidden"), 3000);
-        })
-        .catch((error) => {
-          alert("Gagal mengirim pesan: " + error.message);
+      pesanArray.forEach((pesan, index) => {
+        const waktu = new Date(pesan.timestamp).toLocaleString("id-ID", {
+          day: "2-digit", month: "2-digit", year: "numeric",
+          hour: "2-digit", minute: "2-digit"
         });
-    };
+
+        const row = `
+          <tr>
+            <td class="px-4 py-2">${index + 1}</td>
+            <td class="px-4 py-2">${pesan.nama}</td>
+            <td class="px-4 py-2">${pesan.isi}</td>
+            <td class="px-4 py-2 text-sm text-gray-500">${waktu}</td>
+          </tr>
+        `;
+        tableBody.innerHTML += row;
+      });
+    });
   </script>
 </body>
 </html>
