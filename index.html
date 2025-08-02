@@ -2,107 +2,83 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Kirim Pesan ke Rifa</title>
-  <script type="module" src="firebase.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kirim Pesan Anonim</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: sans-serif;
-      padding: 2rem;
-      background: linear-gradient(to bottom right, #673AB7, #7A4988);
-      color: white;
-    }
-    textarea, input {
-      width: 100%;
-      padding: 1rem;
-      margin-top: 1rem;
-      border-radius: 0.5rem;
-      border: none;
-    }
-    button {
-      margin-top: 1rem;
-      padding: 1rem;
-      background: white;
-      color: #673AB7;
-      font-weight: bold;
-      border: none;
-      border-radius: 0.5rem;
-      cursor: pointer;
-    }
-    .balasan-box {
-      margin-top: 2rem;
-      padding: 1rem;
-      background: rgba(255,255,255,0.1);
-      border: 1px solid white;
-      border-radius: 0.5rem;
-    }
-    .balasan-box h3 {
-      margin-top: 0;
+      font-family: 'Inter', sans-serif;
     }
   </style>
 </head>
-<body>
-  <h2>📝 Kirim Pesan Anonim ke Rifa</h2>
-  <form id="pesanForm">
-    <input type="text" id="nama" placeholder="Nama kamu (boleh palsu)" required>
-    <textarea id="pesan" placeholder="Tulis pesanmu..." rows="5" required></textarea>
-    <button type="submit">Kirim Pesan</button>
-  </form>
+<body class="min-h-screen bg-gray-100 flex items-center justify-center px-4">
+  <div class="max-w-md w-full bg-white rounded-2xl shadow-lg p-6">
+    <h1 class="text-2xl font-semibold text-gray-800 mb-4 text-center">💌 Kirim Pesan Anonim</h1>
+    
+    <label class="block text-sm font-medium text-gray-700 mb-1">Nama (Opsional)</label>
+    <input id="nameInput" type="text" placeholder="Boleh dikosongkan"
+      class="w-full px-4 py-2 mb-4 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500">
 
-  <div id="pesanTerkirim" style="margin-top:2rem;"></div>
-  <div id="balasanArea" class="balasan-box" style="display:none;"></div>
+    <label class="block text-sm font-medium text-gray-700 mb-1">Isi Pesan *</label>
+    <textarea id="messageInput" rows="4" placeholder="Tulis pesanmu di sini..."
+      class="w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 mb-4"></textarea>
 
+    <button onclick="sendMessage()"
+      class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 rounded-xl transition duration-200">
+      Kirim Pesan
+    </button>
+
+    <p id="status" class="text-center mt-4 text-sm text-green-600 hidden">Pesan berhasil dikirim!</p>
+  </div>
+
+  <!-- Firebase SDK -->
   <script type="module">
-    import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-    import { app } from './firebase.js';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
-    const db = getDatabase(app);
-    const pesanForm = document.getElementById('pesanForm');
-    const balasanArea = document.getElementById('balasanArea');
-    const pesanTerkirim = document.getElementById('pesanTerkirim');
+    const firebaseConfig = {
+      apiKey: "AIzaSyDyVqF5Mmn0ImQ8V9JORBK-K0C2Bn-xBd4",
+      authDomain: "pesananonim-843d6.firebaseapp.com",
+      databaseURL: "https://pesananonim-843d6-default-rtdb.firebaseio.com",
+      projectId: "pesananonim-843d6",
+      storageBucket: "pesananonim-843d6.firebasestorage.app",
+      messagingSenderId: "628233179263",
+      appId: "1:628233179263:web:54b915aef951ae06a86f4a",
+      measurementId: "G-T002ZGE4MM"
+    };
 
-    // Kirim pesan
-    pesanForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const nama = document.getElementById('nama').value.trim();
-      const pesan = document.getElementById('pesan').value.trim();
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
 
-      if (!nama || !pesan) return;
+    window.sendMessage = function () {
+      const name = document.getElementById("nameInput").value.trim();
+      const message = document.getElementById("messageInput").value.trim();
+      const status = document.getElementById("status");
 
-      push(ref(db, 'pesanAnonim/'), {
-        nama,
-        pesan,
-        waktu: Date.now()
-      }).then(() => {
-        alert('Pesan berhasil dikirim!');
-        pesanForm.reset();
+      if (message === "") {
+        alert("Pesan tidak boleh kosong!");
+        return;
+      }
 
-        // Tampilkan pesan yang dikirim
-        pesanTerkirim.innerHTML = `
-          <h3>✅ Pesan kamu telah terkirim:</h3>
-          <p><strong>${nama}</strong>: ${pesan}</p>
-        `;
-      });
-    });
+      const data = {
+        nama: name || "Anonim",
+        isi: message,
+        timestamp: Date.now()
+      };
 
-    // Cek balasan
-    document.getElementById('nama').addEventListener('blur', (e) => {
-      const nama = e.target.value.trim().toLowerCase();
-      if (!nama) return;
-
-      const balasanRef = ref(db, 'balasan/');
-      onChildAdded(balasanRef, (data) => {
-        const val = data.val();
-        if (val.untuk.toLowerCase() === nama) {
-          balasanArea.style.display = 'block';
-          const waktu = new Date(val.waktu).toLocaleString('id-ID');
-          balasanArea.innerHTML = `
-            <h3>📩 Balasan dari Admin:</h3>
-            <p>${val.balasan}</p>
-            <div style="font-size:0.8rem;color:#ccc;">Dikirim: ${waktu}</div>
-          `;
-        }
-      });
-    });
+      push(ref(database, "pesan"), data)
+        .then(() => {
+          document.getElementById("messageInput").value = "";
+          document.getElementById("nameInput").value = "";
+          status.classList.remove("hidden");
+          setTimeout(() => status.classList.add("hidden"), 3000);
+        })
+        .catch((error) => {
+          alert("Gagal mengirim pesan: " + error.message);
+        });
+    };
   </script>
 </body>
 </html>
