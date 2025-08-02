@@ -28,6 +28,19 @@
       border-radius: 0.5rem;
       cursor: pointer;
     }
+    #pesanTerkirim {
+      margin-top: 2rem;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 1rem;
+      border-radius: 0.5rem;
+    }
+    .balasan {
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      background: rgba(255, 255, 255, 0.2);
+      border-left: 4px solid #fff;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -38,12 +51,15 @@
     <button type="submit">Kirim Pesan</button>
   </form>
 
+  <div id="pesanTerkirim"></div>
+
   <script type="module">
-    import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
     import { app } from './firebase.js';
 
     const db = getDatabase(app);
     const pesanForm = document.getElementById('pesanForm');
+    const pesanTerkirim = document.getElementById('pesanTerkirim');
 
     pesanForm.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -53,11 +69,27 @@
       push(ref(db, 'pesanAnonim/'), {
         nama,
         pesan,
-        waktu: Date.now()
+        waktu: Date.now(),
+        balasan: "" // Awalnya kosong
       }).then(() => {
         alert('Pesan berhasil dikirim!');
         pesanForm.reset();
       });
+    });
+
+    // Menampilkan semua pesan beserta balasannya
+    onChildAdded(ref(db, 'pesanAnonim/'), (data) => {
+      const { nama, pesan, waktu, balasan } = data.val();
+      const waktuBaru = new Date(waktu).toLocaleString('id-ID');
+
+      const div = document.createElement('div');
+      div.innerHTML = `
+        <div><strong>${nama}</strong> (${waktuBaru}):</div>
+        <div>"${pesan}"</div>
+        ${balasan ? `<div class="balasan">📩 Balasan: ${balasan}</div>` : ""}
+        <hr>
+      `;
+      pesanTerkirim.prepend(div);
     });
   </script>
 </body>
