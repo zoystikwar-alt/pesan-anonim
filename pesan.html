@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Admin Panel – Pesan Anonim</title>
+  <title>Pesan Masuk</title>
   <script type="module" src="firebase.js"></script>
   <style>
     body {
@@ -11,94 +11,112 @@
       background: #f3f3f3;
     }
     .pesan {
-      position: relative;
-      background: #fff;
+      background: white;
       padding: 1rem;
       margin-bottom: 1.5rem;
       border-radius: 0.5rem;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      position: relative;
     }
-    .nama { font-weight: bold; color: #673AB7; }
-    .waktu { font-size: 0.85rem; color: gray; }
+    .nama {
+      font-weight: bold;
+      color: #673AB7;
+    }
+    .waktu {
+      color: gray;
+      font-size: 0.85rem;
+    }
     .hapus-btn {
-      position: absolute; top: 1rem; right: 1rem;
-      background: #e53935; color: #fff;
-      border: none; padding: 0.4rem 0.8rem;
-      border-radius: 0.3rem; cursor: pointer;
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: #e53935;
+      color: white;
+      border: none;
+      padding: 0.4rem 0.8rem;
+      border-radius: 0.3rem;
+      cursor: pointer;
     }
     .balas-form {
       margin-top: 1rem;
     }
     .balas-form input {
-      width: 70%; padding: 0.4rem;
-      border: 1px solid #ccc; border-radius: 0.3rem;
+      width: 70%;
+      padding: 0.4rem;
       margin-right: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 0.3rem;
     }
     .balas-form button {
       padding: 0.4rem 0.8rem;
-      background: #4CAF50; color: #fff;
-      border: none; border-radius: 0.3rem;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 0.3rem;
       cursor: pointer;
+    }
+    .balasanTerkirim {
+      margin-top: 0.5rem;
+      font-style: italic;
+      color: #4CAF50;
     }
   </style>
 </head>
 <body>
-  <h2>📬 Admin Panel – Pesan Masuk</h2>
+  <h2>📬 Pesan Masuk</h2>
   <div id="daftarPesan"></div>
 
   <script type="module">
-    import { getDatabase, ref, onChildAdded, remove, update } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    import { getDatabase, ref, onChildAdded, remove, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
     import { app } from './firebase.js';
 
     const db = getDatabase(app);
-    const daftar = document.getElementById('daftarPesan');
+    const daftarPesan = document.getElementById('daftarPesan');
 
-    onChildAdded(ref(db, 'pesanAnonim/'), (snap) => {
-      const key = snap.key;
-      const { nama, pesan, waktu, balasan } = snap.val();
+    onChildAdded(ref(db, 'pesanAnonim/'), (data) => {
+      const key = data.key;
+      const { nama, pesan, waktu } = data.val();
       const waktuBaru = new Date(waktu).toLocaleString('id-ID');
 
       const div = document.createElement('div');
       div.className = 'pesan';
+
       div.innerHTML = `
         <div class="nama">Dari: ${nama}</div>
-        <div>${pesan}</div>
-        <div class="waktu">Dikirim: ${waktuBaru}</div>
-        ${balasan ? `<div style="margin-top:.5rem;padding:.5rem;background:#eef;border-left:4px solid #4CAF50;">
-          <strong>Balasan:</strong> ${balasan.teks}<br>
-          <span style="font-size:.8rem;color:gray;">
-            ${new Date(balasan.waktu).toLocaleString('id-ID')}
-          </span>
-        </div>` : ''}
+        <div class="isi">${pesan}</div>
+        <div class="waktu">${waktuBaru}</div>
+        <div class="balasanTerkirim" id="balasan-${key}"></div>
         <button class="hapus-btn">Hapus</button>
+
         <form class="balas-form">
           <input type="text" placeholder="Tulis balasan..." required />
           <button type="submit">Balas</button>
         </form>
       `;
 
-      // hapus
-      div.querySelector('.hapus-btn').onclick = () => {
-        if (confirm('Yakin hapus pesan ini?')) {
-          remove(ref(db, `pesanAnonim/${key}`));
-          daftar.removeChild(div);
+      // Tombol hapus
+      div.querySelector('.hapus-btn').addEventListener('click', () => {
+        if (confirm('Yakin mau hapus pesan ini?')) {
+          remove(ref(db, 'pesanAnonim/' + key));
+          div.remove();
         }
-      };
+      });
 
-      // balas
-      div.querySelector('.balas-form').onsubmit = (e) => {
+      // Form balas
+      div.querySelector('.balas-form').addEventListener('submit', (e) => {
         e.preventDefault();
-        const teks = e.target.querySelector('input').value.trim();
-        if (!teks) return;
-        update(ref(db, `pesanAnonim/${key}`), {
-          balasan: { teks, waktu: Date.now() }
+        const balasan = e.target.querySelector('input').value;
+        set(ref(db, 'balasan/' + key), {
+          untuk: nama,
+          balasan,
+          waktu: Date.now()
         }).then(() => {
-          alert('Balasan tersimpan.');
+          document.getElementById('balasan-' + key).textContent = 'Balasan terkirim: ' + balasan;
           e.target.reset();
         });
-      };
+      });
 
-      daftar.prepend(div);
+      daftarPesan.prepend(div);
     });
   </script>
 </body>
