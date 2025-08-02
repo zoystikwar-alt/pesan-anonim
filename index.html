@@ -51,58 +51,34 @@
   <div id="pesanTerkirim" style="margin-top:2rem;"></div>
   <div id="balasanArea" class="balasan-box" style="display:none;"></div>
 
-  <script type="module">
-    import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-    import { app } from './firebase.js';
+ <script type="module">
+<script type="module">
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+  import { app } from './firebase.js';
 
-    const db = getDatabase(app);
-    const pesanForm = document.getElementById('pesanForm');
-    const balasanArea = document.getElementById('balasanArea');
-    const pesanTerkirim = document.getElementById('pesanTerkirim');
+  const db = getDatabase(app);
+  const pesanContainer = document.createElement('div');
+  document.body.appendChild(pesanContainer);
 
-    // Kirim pesan
-    pesanForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const nama = document.getElementById('nama').value.trim();
-      const pesan = document.getElementById('pesan').value.trim();
-
-      if (!nama || !pesan) return;
-
-      push(ref(db, 'pesanAnonim/'), {
-        nama,
-        pesan,
-        waktu: Date.now()
-      }).then(() => {
-        alert('Pesan berhasil dikirim!');
-        pesanForm.reset();
-
-        // Tampilkan pesan yang dikirim
-        pesanTerkirim.innerHTML = `
-          <h3> Pesan kamu telah terkirim:</h3>
-          <p><strong>${nama}</strong>: ${pesan}</p>
+  onValue(ref(db, 'pesanAnonim/'), (snapshot) => {
+    pesanContainer.innerHTML = ''; // Bersihkan dulu
+    const data = snapshot.val();
+    if (data) {
+      // Ubah jadi array dan urutkan terbaru di atas
+      Object.entries(data).sort((a, b) => b[1].waktu - a[1].waktu).forEach(([id, pesan]) => {
+        const div = document.createElement('div');
+        div.style = 'background: rgba(255,255,255,0.1); padding:1rem; margin-top:1rem; border-radius:0.5rem;';
+        div.innerHTML = `
+          <p><strong>💌 Pesan:</strong><br>${pesan.pesan}</p>
+          ${pesan.balasan ? `<p><strong>📬 Balasan dari Admin:</strong><br>${pesan.balasan}</p>` : ''}
+          <small>${new Date(pesan.waktu).toLocaleString()}</small>
         `;
+        pesanContainer.appendChild(div);
       });
-    });
+    }
+  });
+</script>
 
-    // Cek balasan
-    document.getElementById('nama').addEventListener('blur', (e) => {
-      const nama = e.target.value.trim().toLowerCase();
-      if (!nama) return;
-
-      const balasanRef = ref(db, 'balasan/');
-      onChildAdded(balasanRef, (data) => {
-        const val = data.val();
-        if (val.untuk.toLowerCase() === nama) {
-          balasanArea.style.display = 'block';
-          const waktu = new Date(val.waktu).toLocaleString('id-ID');
-          balasanArea.innerHTML = `
-            <h3>📩 Balasan dari Admin:</h3>
-            <p>${val.balasan}</p>
-            <div style="font-size:0.8rem;color:#ccc;">Dikirim: ${waktu}</div>
-          `;
-        }
-      });
-    });
-  </script>
 </body>
 </html>
+
