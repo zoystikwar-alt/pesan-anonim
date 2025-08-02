@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Kirim Pesan Anonim ke Rifa</title>
+  <title>Kirim Pesan ke Rifa</title>
   <script type="module" src="firebase.js"></script>
   <style>
     body {
@@ -34,9 +34,10 @@
       background: rgba(255,255,255,0.1);
       border: 1px solid white;
       border-radius: 0.5rem;
-      display: none;
     }
-    .balasan-box h3 { margin-top: 0; }
+    .balasan-box h3 {
+      margin-top: 0;
+    }
   </style>
 </head>
 <body>
@@ -47,46 +48,58 @@
     <button type="submit">Kirim Pesan</button>
   </form>
 
-  <div id="balasanBox" class="balasan-box">
-    <h3>📩 Balasan dari Admin:</h3>
-    <p id="isiBalasan"></p>
-    <div style="font-size:0.8rem;color:#ccc;" id="waktuBalasan"></div>
-  </div>
+  <div id="pesanTerkirim" style="margin-top:2rem;"></div>
+  <div id="balasanArea" class="balasan-box" style="display:none;"></div>
 
   <script type="module">
-    import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
     import { app } from './firebase.js';
 
     const db = getDatabase(app);
-    const form = document.getElementById('pesanForm');
-    const balasanBox = document.getElementById('balasanBox');
-    const isiBalasan = document.getElementById('isiBalasan');
-    const waktuBalasan = document.getElementById('waktuBalasan');
+    const pesanForm = document.getElementById('pesanForm');
+    const balasanArea = document.getElementById('balasanArea');
+    const pesanTerkirim = document.getElementById('pesanTerkirim');
 
-    form.addEventListener('submit', async (e) => {
+    // Kirim pesan
+    pesanForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const nama = document.getElementById('nama').value.trim();
       const pesan = document.getElementById('pesan').value.trim();
+
       if (!nama || !pesan) return;
 
-      // kirim pesan dan dapatkan key-nya
-      const newRef = await push(ref(db, 'pesanAnonim/'), {
+      push(ref(db, 'pesanAnonim/'), {
         nama,
         pesan,
         waktu: Date.now()
+      }).then(() => {
+        alert('Pesan berhasil dikirim!');
+        pesanForm.reset();
+
+        // Tampilkan pesan yang dikirim
+        pesanTerkirim.innerHTML = `
+          <h3>✅ Pesan kamu telah terkirim:</h3>
+          <p><strong>${nama}</strong>: ${pesan}</p>
+        `;
       });
+    });
 
-      alert('Pesan berhasil dikirim! Tunggu balasan admin…');
-      form.reset();
+    // Cek balasan
+    document.getElementById('nama').addEventListener('blur', (e) => {
+      const nama = e.target.value.trim().toLowerCase();
+      if (!nama) return;
 
-      // subscribe hanya ke balasan pesan ini
-      const balasanRef = ref(db, `pesanAnonim/${newRef.key}/balasan`);
-      onValue(balasanRef, (snap) => {
-        if (snap.exists()) {
-          const { teks, waktu: t } = snap.val();
-          isiBalasan.textContent = teks;
-          waktuBalasan.textContent = new Date(t).toLocaleString('id-ID');
-          balasanBox.style.display = 'block';
+      const balasanRef = ref(db, 'balasan/');
+      onChildAdded(balasanRef, (data) => {
+        const val = data.val();
+        if (val.untuk.toLowerCase() === nama) {
+          balasanArea.style.display = 'block';
+          const waktu = new Date(val.waktu).toLocaleString('id-ID');
+          balasanArea.innerHTML = `
+            <h3>📩 Balasan dari Admin:</h3>
+            <p>${val.balasan}</p>
+            <div style="font-size:0.8rem;color:#ccc;">Dikirim: ${waktu}</div>
+          `;
         }
       });
     });
